@@ -2,10 +2,12 @@ version: '3'
 services:
   postgres:
     container_name: postgres
-    image: ${DOCKER_IMAGE_TAG:-registry.erst.dk/ml-data-images/ml-erst-platform-data-template-image}
+    image: ${DOCKER_IMAGE_TAG:-postgres:9.5.10}
     volumes:
       - ./postgres-data/:/var/lib/postgresql/data
       - ./support/export-data.sh:/mnt/tools/export-data.sh
+      - ./src/main/sql:/mnt/sql
+      - ./build/csv:/mnt/csv
       - ./build/postgres:/mnt/data
     environment:
       - POSTGRES_USER=ml

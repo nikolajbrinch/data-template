@@ -2,4 +2,4 @@
 
 containerId=`docker ps --quiet --filter="name=postgres"`
 
-docker exec $containerId sh -c 'pg_dump --dbname=postgresql://postgres:postgres@localhost:5432/ml --clean'
+docker exec $containerId sh -c 'psql --dbname=postgresql://postgres:postgres@localhost:5432/ml -f /mnt/sql/import-csv.sql'

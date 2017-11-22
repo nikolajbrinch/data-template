@@ -1,0 +1,42 @@
+import java.util.List
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+ext {
+	dockerComposeCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? ['cmd', '/C', 'docker-compose']: ['docker-compose']
+	imageCommand = dockerComposeCommand + [
+			['--file', 'support/test-compose.yml'],
+			['--project-directory', "${projectDir}"]
+	]
+}
+
+task imageUp(dependsOn: ['classes']) {
+	doFirst {
+		def datafilesDirectory = file ("${buildDir}/postgres/datafiles")
+		datafilesDirectory.mkdirs()
+		
+		def command = createCommand(imageCommand, ['up', '-d' ])
+		
+		println "Starting container: (${command})"
+		
+		exec {
+			commandLine (command) 
+		}
+	}
+}
+
+task imageDown(dependsOn: ['classes']) {
+	doFirst {
+		def command = createCommand(imageCommand, ['down'])
+		
+		println "Shutting container down : (${command})"
+		
+		exec { 
+			commandLine (command) 
+		}
+	}
+}
+
+private List<String> createCommand(List baseCommand, List arguments) {
+	return  (baseCommand + arguments).flatten().findAll { String arg -> return arg }
+}

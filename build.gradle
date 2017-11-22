@@ -1,0 +1,9 @@
+plugins { id 'org.unbroken-dome.test-sets' version '1.4.2' }
+
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'maven'
+
+group = 'ml-data-images'
+
+apply from: 'gradle/docker.gradle'

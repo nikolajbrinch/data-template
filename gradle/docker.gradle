@@ -1,0 +1,7 @@
+import java.util.List
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+apply from: "${projectDir}/gradle/docker-common.gradle"
+apply from: "${projectDir}/gradle/docker-build.gradle"
+apply from: "${projectDir}/gradle/docker-compose.gradle"

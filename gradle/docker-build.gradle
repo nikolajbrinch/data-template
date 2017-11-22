@@ -1,0 +1,83 @@
+import java.util.Set
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+ext {
+	dockerBuildArgs = project.properties['ml.server.port'] ? ["server_port=${project.properties['ml.server.port']}"] : []
+	stageDir = file("${buildDir}/dockerStage")
+}
+
+task exportData(dependsOn: ['classes', 'imageDown', 'imageUp']) {
+	doFirst {
+		println "Exporting data..."
+		
+		def command = createCommand(dockerCommand, [
+			'exec',
+			'postgres',
+			'/mnt/tools/export-data.sh'
+		])
+
+		sleep(5 * 1000)
+		
+		exec {
+			commandLine (command)
+		}
+
+	}
+}
+
+task dockerStage(dependsOn: ['exportData']) {
+	doFirst {
+		println "Staging image dependencies..."
+
+		copy {
+			from 'build/postgres'
+			into stageDir
+		}
+		copy {
+			from 'src/main/docker'
+			into stageDir
+		}
+	}
+}
+
+task dockerBuild(dependsOn: ['dockerStage', 'dockerLogin']) {
+	doFirst {
+		def command = createCommand(dockerCommand, [
+			'build',
+			'--force-rm',
+			'--pull'
+		]
+		+ (dockerBuildArgs.collect { buildArg ->
+			return ['--build-arg', buildArg]
+		}) 
+		+ [
+			['--tag', tag],
+			"${stageDir}"
+		])
+		
+		println "Building docker image ${tag}: ${command}"
+		
+		exec { 
+			commandLine (command) 
+		}
+	}
+}
+
+task dockerPush(dependsOn: 'dockerBuild') {
+	doFirst {
+		def command = createCommand(dockerCommand,  ['push', tag])
+		
+		println "Pushing docker image ${tag}: ${command}"
+		
+		exec { 
+			commandLine (command) 
+		}
+	}
+}
+
+check.dependsOn dockerBuild
+
+private List<String> createCommand(List baseCommand, List arguments) {
+	return  (baseCommand + arguments).flatten().findAll { String arg -> return arg }
+}

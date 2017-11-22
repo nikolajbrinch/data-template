@@ -1,0 +1,5 @@
+#!/bin/bash
+
+containerId=`docker ps --quiet --filter="name=postgres"`
+
+docker exec $containerId sh -c 'pg_dump --dbname=postgresql://postgres:postgres@localhost:5432/ml --clean'

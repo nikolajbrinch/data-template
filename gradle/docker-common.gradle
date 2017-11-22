@@ -1,0 +1,45 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+configurations { docker }
+
+sourceSets {
+	docker { resources {srcDir 'src/main/docker'} }
+}
+
+ext {
+	registry = "${dockerRegistryHostname}"
+	dockerHubBuild = 'DOCKER-HUB'.equals(registry?.toUpperCase())
+	dockerCommand = Os.isFamily(Os.FAMILY_WINDOWS) ? ['cmd', '/C', 'docker']: ['docker']
+	version = project.version == 'unspecified' ? 'latest' : project.version;
+	tag = dockerHubBuild
+			? "${dockerRegistryUsername}/${project.group}_${project.name}:${version}"
+			: "${registry}/${project.group}/${project.name}:${version}"
+}
+
+task dockerLogin {
+	doFirst {
+		def command = createCommand(dockerCommand, [
+			'login',
+			[
+				'--username',
+				"${dockerRegistryUsername}"
+			],
+			[
+				'--password',
+				"${dockerRegistryPassword}"
+			],
+			(dockerHubBuild ? '' : registry)
+		])
+
+		println "Docker login command: ${command}"
+
+		exec { 
+			environment['ML_SERVER_PORT'] = project.properties['ml.server.port']  
+			commandLine (command) 
+		}
+	}
+}
+
+private List<String> createCommand(List baseCommand, List arguments) {
+	return  (baseCommand + arguments).flatten().findAll { String arg -> return arg }
+}

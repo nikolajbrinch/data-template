@@ -1,0 +1,78 @@
+import java.util.Set
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+task exportData(dependsOn: ['classes']) {
+	doFirst {
+		println "Exporting data..."
+		
+		def command = createCommand(dockerCommand, [
+			'exec',
+			'postgres',
+			"sh -c 'pg_dump --dbname=postgresql://postgres:postgres@localhost:5432/ml --clean'",
+			'>',
+			"${buildDir}/postgres/datafiles/datafile.sql"
+		])
+
+		exec {
+			commandLine (command)
+		}
+
+	}
+}
+
+task dockerStage(dependsOn: ['exportData']) {
+	doFirst {
+		println "Staging image dependencies..."
+
+		copy {
+			from 'src/main'
+			into stageDir
+		}
+		copy {
+			from 'src/main/docker'
+			into stageDir
+		}
+	}
+}
+
+task dockerBuild(dependsOn: ['dockerStage', 'dockerLogin']) {
+	doFirst {
+		def command = createCommand(dockerCommand, [
+			'build',
+			'--force-rm',
+			'--pull'
+		]
+		+ (dockerBuildArgs.collect { buildArg ->
+			return ['--build-arg', buildArg]
+		}) 
+		+ [
+			['--tag', tag],
+			"${stageDir}"
+		])
+		
+		println "Building docker image ${tag}: ${command}"
+		
+		exec { 
+			commandLine (command) 
+		}
+	}
+}
+
+task dockerPush(dependsOn: 'dockerBuild') {
+	doFirst {
+		def command = createCommand(dockerCommand,  ['push', tag])
+		
+		println "Pushing docker image ${tag}: ${command}"
+		
+		exec { 
+			commandLine (command) 
+		}
+	}
+}
+
+check.dependsOn dockerBuild
+
+private List<String> createCommand(List baseCommand, List arguments) {
+	return  (baseCommand + arguments).flatten().findAll { String arg -> return arg }
+}
